@@ -58,7 +58,7 @@
         <div class="card-body">
             <div class="text-center mb-3">
                 @if($product->image_url)
-                    <img src="{{ asset('storage/' . $product->image_url) }}" alt="{{ $product->name }}"
+                    <img src="{{ asset('storage/products/' . $product->image_url) }}" alt="{{ $product->name }}"
                          class="rounded" style="width: 100%; height: 180px; object-fit: cover;">
                 @else
                     <i class="fas fa-leaf" style="font-size: 3.5rem; color: var(--light-green);"></i>
