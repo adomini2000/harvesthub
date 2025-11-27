@@ -12,9 +12,20 @@ use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
 use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/', function () {
     return view('welcome');
+})->name('home'); // ADD NAME
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/pending-users', [AdminController::class, 'pendingUsers'])->name('admin.pending');
+    Route::post('/approve-user/{id}', [AdminController::class, 'approveUser'])->name('admin.approve');
+    Route::post('/reject-user/{id}', [AdminController::class, 'rejectUser'])->name('admin.reject');
+    Route::get('/all-users', [AdminController::class, 'allUsers'])->name('admin.users');
+    Route::post('/toggle-user/{id}', [AdminController::class, 'toggleUserStatus'])->name('admin.toggle');
 });
 
 // Authentication Routes
@@ -24,11 +35,16 @@ Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('login', [LoginController::class, 'login']);
 Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 
+// Pending Approval Page - ADD THIS
+Route::get('/pending-approval', function () {
+    return view('pending-approval');
+})->middleware('auth')->name('pending.approval');
+
 // Dashboard Routes
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-// Buyer Routes
-Route::prefix('buyer')->name('buyer.')->middleware('auth')->group(function () {
+// Buyer Routes - ADD 'approved' MIDDLEWARE
+Route::prefix('buyer')->name('buyer.')->middleware(['auth', 'approved'])->group(function () {
     Route::get('/dashboard', [BuyerDashboardController::class, 'index'])->name('dashboard');
 
     // Profile
@@ -51,12 +67,12 @@ Route::prefix('buyer')->name('buyer.')->middleware('auth')->group(function () {
     Route::get('/checkout', [BuyerOrderController::class, 'checkout'])->name('checkout');
     Route::post('/checkout', [BuyerOrderController::class, 'placeOrder'])->name('orders.place');
 
-    // Rating - ADD THIS LINE
+    // Rating
     Route::post('/orders/{order}/rate', [BuyerOrderController::class, 'rate'])->name('orders.rate');
 });
 
-// Seller Routes
-Route::prefix('seller')->name('seller.')->middleware('auth')->group(function () {
+// Seller Routes - ADD 'approved' MIDDLEWARE
+Route::prefix('seller')->name('seller.')->middleware(['auth', 'approved'])->group(function () {
     Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
 
     // Profile
@@ -72,8 +88,8 @@ Route::prefix('seller')->name('seller.')->middleware('auth')->group(function () 
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });
 
-// Rider Routes
-Route::prefix('rider')->name('rider.')->middleware('auth')->group(function () {
+// Rider Routes - ADD 'approved' MIDDLEWARE
+Route::prefix('rider')->name('rider.')->middleware(['auth', 'approved'])->group(function () {
     Route::get('/dashboard', [RiderDashboardController::class, 'index'])->name('dashboard');
 
     // Delivery History
