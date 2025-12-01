@@ -15,6 +15,12 @@
                         </h2>
                         <p class="text-muted mb-0">Manage your deliveries</p>
                     </div>
+                    <div class="text-end">
+                        <h3 style="color: var(--primary-green);">
+                            <i class="fas fa-wallet"></i> ₱{{ number_format($rider->total_earnings, 2) }}
+                        </h3>
+                        <small class="text-muted">Total Earnings</small>
+                    </div>
                     <div class="d-flex gap-2 align-items-center">
                         <a href="{{ route('rider.history') }}" class="btn btn-outline-primary">
                             <i class="fas fa-history"></i> View History
@@ -72,6 +78,15 @@
                         <span class="badge bg-danger">Closed</span>
                     @endif
                 </div>
+                <hr>
+                <div class="mb-2">
+                    <i class="fas fa-wallet text-muted"></i>
+                    <strong>Total Earnings:</strong><br>
+                    <h4 style="color: var(--primary-green);">₱{{ number_format($rider->total_earnings, 2) }}</h4>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <small><i class="fas fa-info-circle"></i> You earn ₱15.00 per successful delivery!</small>
+                </div>
             </div>
         </div>
     </div>
@@ -103,6 +118,7 @@
                         <i class="fas fa-check-circle" style="font-size: 2rem; color: var(--primary-green);"></i>
                         <h3 class="mt-2">{{ $completedToday }}</h3>
                         <p class="text-muted mb-0">Completed Today</p>
+                        <small class="text-muted">+₱{{ number_format($completedToday * 15, 2) }}</small>
                     </div>
                 </div>
             </div>
@@ -139,6 +155,11 @@
                             <div class="mb-2">
                                 <i class="fas fa-weight text-muted"></i>
                                 <strong>Weight:</strong> {{ number_format($order->total_weight_kg, 2) }}kg
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-money-bill-wave text-muted"></i>
+                                <strong>Your Earning:</strong>
+                                <span style="color: var(--primary-green); font-weight: bold;">₱{{ number_format($order->delivery_fee, 2) }}</span>
                             </div>
                             @if($order->eta)
                                 <div class="mb-2">
@@ -198,7 +219,7 @@
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="delivered">
                                     <button type="submit" class="btn btn-success btn-sm w-100">
-                                        <i class="fas fa-check"></i> Mark as Delivered
+                                        <i class="fas fa-check"></i> Mark as Delivered (+₱15)
                                     </button>
                                 </form>
                             @endif
@@ -217,7 +238,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-list"></i> Available Orders
+                <i class="fas fa-list"></i> Available Orders (₱15 per delivery)
             </div>
             <div class="card-body">
                 @if($availableOrders->isEmpty())
@@ -259,9 +280,16 @@
                                 </div>
                             </div>
                             <div class="col-md-4 text-md-end">
-                                <h4 class="mb-3" style="color: var(--primary-green);">
-                                    ₱{{ number_format($order->total, 2) }}
-                                </h4>
+                                <div class="mb-2">
+                                    <small class="text-muted">Order Value:</small>
+                                    <h5 style="color: #666;">₱{{ number_format($order->total, 2) }}</h5>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Your Earning:</small>
+                                    <h4 style="color: var(--primary-green);">
+                                        <i class="fas fa-money-bill-wave"></i> ₱{{ number_format($order->delivery_fee, 2) }}
+                                    </h4>
+                                </div>
                                 @if($rider->status == 'normal' && $order->total_weight_kg <= $rider->max_capacity_kg)
                                     <form action="{{ route('rider.orders.accept', $order->id) }}" method="POST">
                                         @csrf

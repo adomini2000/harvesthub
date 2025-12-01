@@ -21,6 +21,9 @@ class Order extends Model
         'status',
         'delivery_address',
         'eta',
+        'payment_method',
+        'payment_status',
+        'delivery_fee',
     ];
 
     protected $casts = [
@@ -28,6 +31,7 @@ class Order extends Model
         'points_discount' => 'decimal:2',
         'total' => 'decimal:2',
         'total_weight_kg' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
     ];
 
     // Relationships
@@ -60,5 +64,29 @@ class Order extends Model
     public static function generateOrderNumber()
     {
         return 'ORD-' . strtoupper(uniqid());
+    }
+
+    // NEW: Helper method to get payment method display name
+    public function getPaymentMethodNameAttribute()
+    {
+        $methods = [
+            'card' => 'Credit/Debit Card',
+            'gcash' => 'GCash',
+            'cod' => 'Cash on Delivery'
+        ];
+
+        return $methods[$this->payment_method] ?? 'Unknown';
+    }
+
+    // NEW: Helper method to get payment status badge color
+    public function getPaymentStatusColorAttribute()
+    {
+        $colors = [
+            'pending' => 'warning',
+            'paid' => 'success',
+            'failed' => 'danger'
+        ];
+
+        return $colors[$this->payment_status] ?? 'secondary';
     }
 }

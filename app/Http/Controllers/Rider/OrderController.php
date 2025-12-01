@@ -54,9 +54,9 @@ class OrderController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->role !== 'rider' || $order->rider_id !== $user->rider->id) {
-            return redirect()->back()->with('error', 'Unauthorized access');
-        }
+            if ($user->role !== 'rider' || $order->rider_id !== $user->rider->id) {
+                return redirect()->back()->with('error', 'Unauthorized access');
+            }
 
         $validated = $request->validate([
             'status' => 'required|in:out_for_delivery,delivered',
@@ -64,9 +64,13 @@ class OrderController extends Controller
 
         $order->update(['status' => $validated['status']]);
 
-        // If delivered, set rider back to normal
-        if ($validated['status'] == 'delivered') {
-            $user->rider->update(['status' => 'normal']);
+        // If delivered, set rider back to normal and add earnings
+            if ($validated['status'] == 'delivered') {
+                $rider = $user->rider;
+                $rider->update(['status' => 'normal']);
+
+        // Add delivery fee to rider's earnings (₱15.00 per delivery)
+            $rider->addEarnings($order->delivery_fee);
         }
 
         return redirect()->route('rider.dashboard')->with('success', 'Order status updated!');

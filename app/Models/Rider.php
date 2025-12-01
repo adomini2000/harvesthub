@@ -14,10 +14,12 @@ class Rider extends Model
         'vehicle_type',
         'max_capacity_kg',
         'status',
+        'total_earnings',
     ];
 
     protected $casts = [
         'max_capacity_kg' => 'decimal:2',
+        'total_earnings' => 'decimal:2',
     ];
 
     // Relationships
@@ -40,5 +42,11 @@ class Rider extends Model
     public function canCarry($weight)
     {
         return $weight <= $this->max_capacity_kg;
+    }
+
+     public function addEarnings($amount)
+    {
+        $this->total_earnings += $amount;
+        $this->save();
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
             $table->enum('vehicle_type', ['bike', 'motorcycle', 'car'])->default('bike');
             $table->decimal('max_capacity_kg', 8, 2)->default(10.00);
             $table->enum('status', ['normal', 'busy', 'closed'])->default('normal');
+            $table->decimal('total_earnings', 10, 2)->default(0);
             $table->timestamps();
         });
     }

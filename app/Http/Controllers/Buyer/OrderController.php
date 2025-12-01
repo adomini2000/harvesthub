@@ -108,6 +108,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'delivery_address' => 'required|string|max:500',
             'use_points' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|in:card,gcash,cod',
         ]);
 
         $user = auth()->user();
@@ -191,6 +192,8 @@ class OrderController extends Controller
                     'total_weight_kg' => $orderData['weight'],
                     'status' => 'ordered',
                     'delivery_address' => $validated['delivery_address'],
+                    'payment_method' => $validated['payment_method'],
+                    'payment_status' => $validated['payment_method'] === 'cod' ? 'pending' : 'paid',
                 ]);
 
                 // Create order items and reduce stock
@@ -222,62 +225,68 @@ class OrderController extends Controller
 
             DB::commit();
 
+            $paymentMethodText = [
+                'card' => 'Credit/Debit Card',
+                'gcash' => 'GCash',
+                'cod' => 'Cash on Delivery'
+            ];
+
             return redirect()->route('buyer.orders.index')
-                ->with('success', 'Orders placed successfully! You earned ' . number_format($earnedPoints, 2) . ' points!');
+                ->with('success', 'Orders placed successfully via ' . $paymentMethodText[$validated['payment_method']] . '! You earned ' . number_format($earnedPoints, 2) . ' points!');
 
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Order failed: ' . $e->getMessage());
         }
     }
-        public function rate(Request $request, Order $order)
+
+    public function rate(Request $request, Order $order)
     {
         $user = auth()->user();
 
-            if ($user->role !== 'buyer' || $order->buyer_id !== $user->id) {
+        if ($user->role !== 'buyer' || $order->buyer_id !== $user->id) {
             return redirect()->back()->with('error', 'Unauthorized access');
-    }
+        }
 
         // Check if order is delivered
-            if ($order->status !== 'delivered') {
+        if ($order->status !== 'delivered') {
             return redirect()->back()->with('error', 'You can only rate delivered orders');
-    }
+        }
 
         // Check if already rated
-            if ($order->rating) {
+        if ($order->rating) {
             return redirect()->back()->with('error', 'You have already rated this order');
-    }
+        }
 
-    $validated = $request->validate([
-        'rating' => 'required|integer|min:1|max:5',
-        'comment' => 'nullable|string|max:500',
-    ]);
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:500',
+        ]);
 
-    // Create rating
+        // Create rating
         $rating = \App\Models\Rating::create([
             'order_id' => $order->id,
             'buyer_id' => $user->id,
             'seller_id' => $order->seller_id,
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
-            'bonus_points' => 10, // Bonus points for rating
+            'bonus_points' => 10,
         ]);
 
         // Update seller's average rating
-            $seller = $order->seller;
-            $totalRatings = $seller->ratings()->count();
-            $averageRating = $seller->ratings()->avg('rating');
+        $seller = $order->seller;
+        $totalRatings = $seller->ratings()->count();
+        $averageRating = $seller->ratings()->avg('rating');
 
-            $seller->update([
-                'rating' => $averageRating,
-                'total_ratings' => $totalRatings,
-                            ]);
+        $seller->update([
+            'rating' => $averageRating,
+            'total_ratings' => $totalRatings,
+        ]);
 
         // Award bonus points to buyer
-            $buyerPoints = $user->buyerPoints;
-            $buyerPoints->addPoints(10);
+        $buyerPoints = $user->buyerPoints;
+        $buyerPoints->addPoints(10);
 
         return redirect()->route('buyer.orders.index')->with('success', 'Thank you for your rating! You earned 10 bonus points!');
     }
-
 }

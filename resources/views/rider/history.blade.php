@@ -118,6 +118,7 @@
                                     <th>Items</th>
                                     <th>Weight</th>
                                     <th>Amount</th>
+                                    <th>Earned</th>
                                     <th>Delivered On</th>
                                     <th>ETA</th>
                                 </tr>
@@ -139,6 +140,11 @@
                                         <span class="badge bg-info">
                                             {{ number_format($order->total_weight_kg, 2) }}kg
                                         </span>
+                                    </td>
+                                    <td>
+                                        <strong style="color: var(--primary-green);">
+                                            +₱{{ number_format($order->delivery_fee, 2) }}
+                                        </strong>
                                     </td>
                                     <td>
                                         <strong style="color: var(--primary-green);">

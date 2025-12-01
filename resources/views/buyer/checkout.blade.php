@@ -15,36 +15,38 @@
         </nav>
     </div>
 
-    <form action="{{ route('buyer.orders.place') }}" method="POST">
+    <form id="checkoutForm" action="{{ route('buyer.orders.place') }}" method="POST">
         @csrf
+        <input type="hidden" name="payment_method" id="payment_method_input">
+
         <div class="row">
             <!-- Left Column - Order Details -->
             <div class="col-lg-8 mb-4">
                 <!-- Delivery Address -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="fas fa-map-marker-alt"></i> Delivery Address
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-map-marker-alt"></i> Delivery Address
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="delivery_address" class="form-label">Complete Address *</label>
+                            <textarea id="delivery_address" name="delivery_address" class="form-control @error('delivery_address') is-invalid @enderror"
+                                      rows="3" required placeholder="House/Unit No., Street, Barangay, City">{{ old('delivery_address', auth()->user()->address) }}</textarea>
+                            @error('delivery_address')
+                                <span class="invalid-feedback">{{ $message }}</span>
+                            @enderror
+                            @if(auth()->user()->address)
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Using your default address. You can edit it above if needed.
+                                </small>
+                            @else
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> No default address set. <a href="{{ route('buyer.dashboard') }}">Add one in your profile</a> for faster checkout next time!
+                                </small>
+                            @endif
                         </div>
-                        <div class="card-body">
-                <div class="mb-3">
-                    <label for="delivery_address" class="form-label">Complete Address *</label>
-                    <textarea id="delivery_address" name="delivery_address" class="form-control @error('delivery_address') is-invalid @enderror"
-                                rows="3" required placeholder="House/Unit No., Street, Barangay, City">{{ old('delivery_address', auth()->user()->address) }}</textarea>
-                    @error('delivery_address')
-                        <span class="invalid-feedback">{{ $message }}</span>
-                    @enderror
-                    @if(auth()->user()->address)
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> Using your default address. You can edit it above if needed.
-                    </small>
-                @else
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> No default address set. <a href="{{ route('buyer.dashboard') }}">Add one in your profile</a> for faster checkout next time!
-                    </small>
-                @endif
-            </div>
-        </div>
-    </div>
+                    </div>
+                </div>
 
                 <!-- Orders by Seller -->
                 @foreach($ordersBySeller as $sellerId => $orderData)
@@ -141,8 +143,8 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-check-circle"></i> Place Order
+                            <button type="button" class="btn btn-primary btn-lg" onclick="openPaymentModal()">
+                                <i class="fas fa-check-circle"></i> Proceed to Payment
                             </button>
                             <a href="{{ route('buyer.cart.index') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Cart
@@ -169,10 +171,169 @@
     </form>
 </div>
 
-@push('scripts')
+<!-- Payment Method Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--primary-green); color: white;">
+                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Select Payment Method</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <h4 style="color: var(--primary-green);">Total Amount: ₱<span id="modal-total">0.00</span></h4>
+                </div>
+
+                <div class="payment-options">
+                    <!-- Credit/Debit Card -->
+                    <div class="payment-option mb-3" onclick="selectPayment('card')">
+                        <input type="radio" name="payment_option" id="payment_card" value="card" class="payment-radio">
+                        <label for="payment_card" class="payment-label">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon">
+                                    <i class="fas fa-credit-card fa-2x" style="color: #4A90E2;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Credit / Debit Card</strong>
+                                    <p class="mb-0 small text-muted">Visa, Mastercard, or other cards</p>
+                                </div>
+                                <div class="payment-check">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- GCash -->
+                    <div class="payment-option mb-3" onclick="selectPayment('gcash')">
+                        <input type="radio" name="payment_option" id="payment_gcash" value="gcash" class="payment-radio">
+                        <label for="payment_gcash" class="payment-label">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon">
+                                    <i class="fas fa-mobile-alt fa-2x" style="color: #007DFF;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>GCash</strong>
+                                    <p class="mb-0 small text-muted">Pay using your GCash wallet</p>
+                                </div>
+                                <div class="payment-check">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Cash on Delivery -->
+                    <div class="payment-option mb-3" onclick="selectPayment('cod')">
+                        <input type="radio" name="payment_option" id="payment_cod" value="cod" class="payment-radio">
+                        <label for="payment_cod" class="payment-label">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon">
+                                    <i class="fas fa-money-bill-wave fa-2x" style="color: #2ECC71;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Cash on Delivery</strong>
+                                    <p class="mb-0 small text-muted">Pay when you receive your order</p>
+                                </div>
+                                <div class="payment-check">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <small><i class="fas fa-info-circle"></i> <strong>Note:</strong> This is a mock payment system. No actual payment will be processed.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="confirmPayment()" disabled id="confirmPaymentBtn">
+                    <i class="fas fa-check"></i> Confirm & Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .payment-options {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .payment-option {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .payment-radio {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .payment-label {
+        display: block;
+        padding: 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+        margin: 0;
+    }
+
+    .payment-label:hover {
+        border-color: var(--primary-green);
+        background: var(--pale-green);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .payment-radio:checked + .payment-label {
+        border-color: var(--primary-green);
+        background: var(--pale-green);
+        box-shadow: 0 0 0 3px rgba(124, 179, 66, 0.2);
+    }
+
+    .payment-icon {
+        width: 60px;
+        text-align: center;
+        margin-right: 15px;
+    }
+
+    .payment-check {
+        color: var(--primary-green);
+        font-size: 1.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .payment-radio:checked + .payment-label .payment-check {
+        opacity: 1;
+    }
+
+    .payment-label strong {
+        font-size: 1.1rem;
+        display: block;
+        margin-bottom: 5px;
+    }
+</style>
+
 <script>
     const subtotal = {{ $subtotal }};
     const maxPoints = {{ $points->total_points ?? 0 }};
+    let paymentModal;
+    let selectedPaymentMethod = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        calculateTotal();
+    });
 
     function calculateTotal() {
         const usePoints = parseFloat(document.getElementById('use_points').value) || 0;
@@ -209,10 +370,55 @@
         }
     }
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        calculateTotal();
-    });
+    function openPaymentModal() {
+        // Validate delivery address
+        const deliveryAddress = document.getElementById('delivery_address').value.trim();
+        if (!deliveryAddress) {
+            alert('Please enter your delivery address');
+            document.getElementById('delivery_address').focus();
+            return;
+        }
+
+        // Update modal total
+        const finalTotal = document.getElementById('final-total').textContent;
+        document.getElementById('modal-total').textContent = finalTotal;
+
+        // Reset payment selection
+        selectedPaymentMethod = null;
+        document.querySelectorAll('.payment-radio').forEach(radio => {
+            radio.checked = false;
+        });
+        document.getElementById('confirmPaymentBtn').disabled = true;
+
+        // Show modal
+        paymentModal.show();
+    }
+
+    function selectPayment(method) {
+        selectedPaymentMethod = method;
+        document.getElementById('payment_' + method).checked = true;
+        document.getElementById('confirmPaymentBtn').disabled = false;
+    }
+
+    function confirmPayment() {
+        if (!selectedPaymentMethod) {
+            alert('Please select a payment method');
+            return;
+        }
+
+        // Set payment method in hidden input
+        document.getElementById('payment_method_input').value = selectedPaymentMethod;
+
+        // Show processing message
+        const btn = document.getElementById('confirmPaymentBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        btn.disabled = true;
+
+        // Simulate payment processing
+        setTimeout(() => {
+            // Submit the form
+            document.getElementById('checkoutForm').submit();
+        }, 1500);
+    }
 </script>
-@endpush
 @endsection
